@@ -1,1 +1,1 @@
-CREATE SCHEMA clicktozip;
+CREATE SCHEMA IF NOT EXISTS clicktozip;
