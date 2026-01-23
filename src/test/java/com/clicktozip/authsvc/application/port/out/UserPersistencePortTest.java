@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -25,6 +26,9 @@ class UserPersistencePortTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder encoder;
+
     @InjectMocks
     private UserPersistencePortImpl userPersistencePort;
 
@@ -34,17 +38,17 @@ class UserPersistencePortTest {
     @BeforeEach
     void setUp() {
         UUID userId = UUID.randomUUID();
-        user = new User(userId.toString(), "Test User", "test@example.com", "password");
+        user = new User(userId.toString(), "Test User", "test@example.com", "rawPassword");
+        
         userEntity = new UserEntity();
         userEntity.setUserId(userId);
         userEntity.setName("Test User");
         userEntity.setEmail("test@example.com");
+        userEntity.setPasswordHash("encodedPassword");
     }
 
     @Test
     void shouldSaveUser() {
-        // This test requires UserMapper.toEntity() to exist
-        // and UserPersistencePortImpl to have a constructor.
         when(userRepository.save(any(UserEntity.class))).thenReturn(userEntity);
 
         User savedUser = userPersistencePort.save(user);
@@ -55,19 +59,48 @@ class UserPersistencePortTest {
     }
 
     @Test
-    void shouldFindByEmail() {
-        // This test requires UserPersistencePortImpl to have a constructor.
+    void whenCredentialsAreValid_shouldFindByEmailAndPassword() {
+        // Given
+        String rawPassword = "password123";
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(userEntity));
+        when(encoder.matches(rawPassword, userEntity.getPasswordHash())).thenReturn(true);
 
-        Optional<User> foundUser = userPersistencePort.findByEmail("test@example.com");
+        // When
+        Optional<User> foundUser = userPersistencePort.findByEmailAndPassword("test@example.com", rawPassword);
 
+        // Then
         assertThat(foundUser).isPresent();
         assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
     }
 
     @Test
+    void whenPasswordIsInvalid_shouldNotFindByEmailAndPassword() {
+        // Given
+        String wrongPassword = "wrongPassword";
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(userEntity));
+        when(encoder.matches(wrongPassword, userEntity.getPasswordHash())).thenReturn(false);
+
+        // When
+        Optional<User> foundUser = userPersistencePort.findByEmailAndPassword("test@example.com", wrongPassword);
+
+        // Then
+        assertThat(foundUser).isNotPresent();
+    }
+
+    @Test
+    void whenUserDoesNotExist_shouldNotFindByEmailAndPassword() {
+        // Given
+        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
+
+        // When
+        Optional<User> foundUser = userPersistencePort.findByEmailAndPassword("nonexistent@example.com", "anyPassword");
+
+        // Then
+        assertThat(foundUser).isNotPresent();
+    }
+
+    @Test
     void shouldCheckIfEmailExists() {
-        // This test requires UserPersistencePortImpl to have a constructor.
         when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
 
         boolean exists = userPersistencePort.existsByEmail("test@example.com");
