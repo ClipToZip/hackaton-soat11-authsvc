@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20260121-create-schema
+      author: fabiana.casagrande
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: seeds/20260121-create-schema.sql
+            relativeToChangelogFile: true
+
+  - changeSet:
+      id: 20260121-create-user-table
+      author: fabiana.casagrande
+      changes:
+        - sqlFile:
+            encoding: utf8
+            path: seeds/20260121-create-user-table.sql
+            relativeToChangelogFile: true

@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: ${DB_HOST}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    networks:
+      - service-clicktozip-network
+
+  db:
+    image: postgres:16.11-alpine
+    container_name: clicktozip-db
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: clicktozip
+      POSTGRES_PASSWORD: cl!ckt0z!p
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "7575:5432"  # Externa:Interna
+    networks:
+      - service-clicktozip-network
+
+networks:
+  service-clicktozip-network:
+    driver: bridge
+
+volumes:
+  postgres_data: {}
