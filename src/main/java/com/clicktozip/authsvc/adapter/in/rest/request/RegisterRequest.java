@@ -5,7 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record LoginRequest(
+public record RegisterRequest(
+        String name,
+
         @NotBlank(message = "Email não pode estar em branco")
         @NotNull(message = "Email não pode ser nulo")
         @Email(message = "Email deve ser válido")

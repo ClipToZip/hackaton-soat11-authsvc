@@ -6,6 +6,6 @@ import java.util.Optional;
 
 public interface UserPersistencePort{
     User save(User user);
-    Optional<User> findByEmail(String email);
+    Optional<User> findByEmailAndPassword(String email, String password);
     boolean existsByEmail(String email);
 }

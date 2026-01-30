@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -24,9 +23,6 @@ class AuthUseCaseTest {
 
     @Mock
     private UserPersistencePort userPersistencePort;
-
-    @Mock
-    private PasswordEncoder encoder;
 
     @Mock
     private JwtService jwtService;
@@ -46,8 +42,7 @@ class AuthUseCaseTest {
     @Test
     void whenLoginSuccessful_thenReturnTokenResponse() {
         // Given
-        when(userPersistencePort.findByEmail(loginRequest.email())).thenReturn(Optional.of(user));
-        when(encoder.matches(loginRequest.password(), user.getPassswordHash())).thenReturn(true);
+        when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
         when(jwtService.generateToken(user)).thenReturn("fake-jwt-token");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
@@ -64,25 +59,12 @@ class AuthUseCaseTest {
     @Test
     void whenUserNotFound_thenThrowRuntimeException() {
         // Given
-        when(userPersistencePort.findByEmail(loginRequest.email())).thenReturn(Optional.empty());
+        when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.empty());
 
         // When & Then
         RuntimeException exception = assertThrows(RuntimeException.class, () -> {
             authUseCase.login(loginRequest);
         });
-        assertThat(exception.getMessage()).isEqualTo("Credenciais inválidas");
-    }
-
-    @Test
-    void whenPasswordDoesNotMatch_thenThrowRuntimeException() {
-        // Given
-        when(userPersistencePort.findByEmail(loginRequest.email())).thenReturn(Optional.of(user));
-        when(encoder.matches(loginRequest.password(), user.getPassswordHash())).thenReturn(false);
-
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            authUseCase.login(loginRequest);
-        });
-        assertThat(exception.getMessage()).isEqualTo("Credenciais inválidas");
+        assertThat(exception.getMessage()).isEqualTo("Invalid email or password");
     }
 }

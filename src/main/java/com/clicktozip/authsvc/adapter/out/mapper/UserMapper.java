@@ -6,6 +6,7 @@ import com.clicktozip.authsvc.domain.model.User;
 import java.util.UUID;
 
 public class UserMapper {
+
     public static User toDomain(UserEntity entity) {
         if (entity == null) {
             return null;
@@ -15,20 +16,22 @@ public class UserMapper {
                 entity.getUserId().toString(),
                 entity.getName(),
                 entity.getEmail(),
-                entity.getPasswordHash()
+                null
         );
     }
 
-    public static UserEntity toEntity(User domain) {
-        if (domain == null) {
+    public static UserEntity toEntity(User user) {
+        if (user == null) {
             return null;
         }
 
         UserEntity entity = new UserEntity();
-        entity.setUserId(domain.getUserId() != null ? UUID.fromString(domain.getUserId()) : null);
-        entity.setName(domain.getName());
-        entity.setEmail(domain.getEmail());
-        entity.setPasswordHash(domain.getPassswordHash());
+        if (user.getUserId() != null && !user.getUserId().isEmpty()) {
+            entity.setUserId(UUID.fromString(user.getUserId()));
+        }
+        entity.setName(user.getName());
+        entity.setEmail(user.getEmail());
+        entity.setPasswordHash(user.getPassswordHash());
         return entity;
     }
 }
