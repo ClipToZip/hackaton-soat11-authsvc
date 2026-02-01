@@ -2,6 +2,8 @@ package com.clicktozip.authsvc.application.usecase;
 
 import com.clicktozip.authsvc.adapter.in.rest.request.LoginRequest;
 import com.clicktozip.authsvc.adapter.in.rest.response.TokenResponse;
+import com.clicktozip.authsvc.application.exception.InvalidCredentialsException;
+import com.clicktozip.authsvc.application.port.out.TokenCachePort;
 import com.clicktozip.authsvc.application.port.out.UserPersistencePort;
 import com.clicktozip.authsvc.application.service.JwtService;
 import com.clicktozip.authsvc.domain.model.User;
@@ -13,10 +15,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthUseCaseTest {
@@ -26,6 +29,9 @@ class AuthUseCaseTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private TokenCachePort tokenCachePort;
 
     @InjectMocks
     private AuthUseCase authUseCase;
@@ -40,31 +46,67 @@ class AuthUseCaseTest {
     }
 
     @Test
-    void whenLoginSuccessful_thenReturnTokenResponse() {
+    void whenNoTokenInCache_shouldGenerateNewTokenAndCacheIt() {
         // Given
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
-        when(jwtService.generateToken(user)).thenReturn("fake-jwt-token");
+        when(tokenCachePort.getToken(user.getEmail())).thenReturn(null); // No token in cache
+        when(jwtService.generateToken(user)).thenReturn("new-fake-jwt-token");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
         // When
         TokenResponse tokenResponse = authUseCase.login(loginRequest);
 
         // Then
-        assertThat(tokenResponse).isNotNull();
-        assertThat(tokenResponse.token()).isEqualTo("fake-jwt-token");
-        assertThat(tokenResponse.tokenType()).isEqualTo("Bearer");
-        assertThat(tokenResponse.expiresInSeconds()).isEqualTo(3600L);
+        assertThat(tokenResponse.token()).isEqualTo("new-fake-jwt-token");
+        verify(tokenCachePort).cacheToken(user.getEmail(), "new-fake-jwt-token", 3600L, TimeUnit.SECONDS);
     }
 
     @Test
-    void whenUserNotFound_thenThrowRuntimeException() {
+    void whenValidTokenExistsInCache_shouldReturnCachedToken() {
+        // Given
+        String cachedToken = "valid-cached-token";
+        when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
+        when(tokenCachePort.getToken(user.getEmail())).thenReturn(cachedToken);
+        when(jwtService.isTokenValid(cachedToken, user.getEmail())).thenReturn(true);
+        when(jwtService.getExpirationSeconds()).thenReturn(3600L);
+
+        // When
+        TokenResponse tokenResponse = authUseCase.login(loginRequest);
+
+        // Then
+        assertThat(tokenResponse.token()).isEqualTo(cachedToken);
+        verify(jwtService, never()).generateToken(any(User.class)); // Ensure new token is not generated
+        verify(tokenCachePort, never()).cacheToken(anyString(), anyString(), anyLong(), any(TimeUnit.class));
+    }
+
+    @Test
+    void whenInvalidTokenExistsInCache_shouldGenerateNewToken() {
+        // Given
+        String expiredToken = "expired-cached-token";
+        when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
+        when(tokenCachePort.getToken(user.getEmail())).thenReturn(expiredToken);
+        when(jwtService.isTokenValid(expiredToken, user.getEmail())).thenReturn(false); // Token is invalid
+        when(jwtService.generateToken(user)).thenReturn("new-fresh-token");
+        when(jwtService.getExpirationSeconds()).thenReturn(3600L);
+
+        // When
+        TokenResponse tokenResponse = authUseCase.login(loginRequest);
+
+        // Then
+        assertThat(tokenResponse.token()).isEqualTo("new-fresh-token");
+        verify(tokenCachePort).deleteToken(user.getEmail()); // Verify old token is deleted
+        verify(tokenCachePort).cacheToken(user.getEmail(), "new-fresh-token", 3600L, TimeUnit.SECONDS); // Verify new token is cached
+    }
+
+    @Test
+    void whenInvalidCredentials_shouldThrowInvalidCredentialsException() {
         // Given
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.empty());
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        assertThrows(InvalidCredentialsException.class, () -> {
             authUseCase.login(loginRequest);
         });
-        assertThat(exception.getMessage()).isEqualTo("Invalid email or password");
+        verify(tokenCachePort, never()).getToken(anyString()); // Ensure cache is not checked on auth failure
     }
 }

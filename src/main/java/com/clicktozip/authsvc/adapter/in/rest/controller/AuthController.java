@@ -8,8 +8,6 @@ import com.clicktozip.authsvc.application.port.in.AuthUseCasePort;
 import com.clicktozip.authsvc.application.port.in.RegisterUseCasePort;
 import com.clicktozip.authsvc.application.port.in.ValidateTokenUseCasePort;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,7 +38,11 @@ public class AuthController {
     }
 
     @PostMapping("/validate-token")
-    public ResponseEntity<Boolean> validateToken(@RequestBody @Valid ValidateTokenRequest req) {
-        return ResponseEntity.status(HttpStatus.OK).body(validateTokenUseCase.validate(req.token()));
+    public ResponseEntity<Void> validateToken(@RequestBody @Valid ValidateTokenRequest req) {
+        // The use case will now throw an InvalidTokenException if the token is invalid,
+        // which will be handled by the GlobalExceptionHandler to return a 401.
+        // If it succeeds, it returns the user's email, and we return 200 OK.
+        validateTokenUseCase.validate(req.token());
+        return ResponseEntity.ok().build();
     }
 }

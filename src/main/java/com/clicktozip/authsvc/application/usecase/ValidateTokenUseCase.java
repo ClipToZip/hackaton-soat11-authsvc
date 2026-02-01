@@ -1,5 +1,6 @@
 package com.clicktozip.authsvc.application.usecase;
 
+import com.clicktozip.authsvc.application.exception.InvalidTokenException;
 import com.clicktozip.authsvc.application.port.in.ValidateTokenUseCasePort;
 import com.clicktozip.authsvc.application.port.out.TokenCachePort;
 import com.clicktozip.authsvc.application.service.JwtService;
@@ -17,43 +18,33 @@ public class ValidateTokenUseCase implements ValidateTokenUseCasePort {
     private final TokenCachePort tokenCachePort;
 
     @Override
-    public boolean validate(String token) {
+    public String validate(String token) {
         if (token == null || token.isEmpty()) {
-            log.warn("Validation failed: Token is missing or empty.");
-            return false;
+            throw new InvalidTokenException("Token is missing or empty.");
         }
 
         try {
-            // 1. Extract email from the token
             final String userEmail = jwtService.extractClaim(token, Claims::getSubject);
 
-            // 2. Check if the token exists in the cache
             String cachedToken = tokenCachePort.getToken(userEmail);
             if (cachedToken == null) {
-                log.warn("Validation failed for user {}: Token not found in cache.", userEmail);
-                return false;
+                throw new InvalidTokenException("Token not found in cache. Please log in again.");
             }
 
-            // 3. Check if the provided token matches the one in the cache
             if (!cachedToken.equals(token)) {
-                log.warn("Validation failed for user {}: Provided token does not match cached token.", userEmail);
-                return false;
+                throw new InvalidTokenException("Stale token. A newer token has been issued.");
             }
 
-            // 4. Use JwtService to validate expiration and signature
             if (!jwtService.isTokenValid(token, userEmail)) {
-                log.warn("Validation failed for user {}: Token is expired or has invalid signature.", userEmail);
-                return false;
+                throw new InvalidTokenException("Token is expired or has an invalid signature.");
             }
 
-            // If all checks pass, the token is valid
             log.info("Token successfully validated for user: {}", userEmail);
-            return true;
+            return userEmail;
 
         } catch (Exception e) {
-            // Catches any parsing errors from jwtService.extractClaim or other unexpected issues
             log.error("An exception occurred during token validation: {}", e.getMessage());
-            return false;
+            throw new InvalidTokenException("Token is malformed or invalid.");
         }
     }
 }
