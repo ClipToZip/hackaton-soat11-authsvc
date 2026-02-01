@@ -2,10 +2,14 @@ package com.clicktozip.authsvc.adapter.in.rest.controller;
 
 import com.clicktozip.authsvc.adapter.in.rest.request.LoginRequest;
 import com.clicktozip.authsvc.adapter.in.rest.request.RegisterRequest;
+import com.clicktozip.authsvc.adapter.in.rest.request.ValidateTokenRequest;
 import com.clicktozip.authsvc.adapter.in.rest.response.TokenResponse;
 import com.clicktozip.authsvc.application.port.in.AuthUseCasePort;
 import com.clicktozip.authsvc.application.port.in.RegisterUseCasePort;
+import com.clicktozip.authsvc.application.port.in.ValidateTokenUseCasePort;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -22,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
     private final AuthUseCasePort authUseCase;
     private final RegisterUseCasePort registerUseCase;
+    private final ValidateTokenUseCasePort validateTokenUseCase;
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@RequestBody @Valid LoginRequest req) {
@@ -32,5 +37,10 @@ public class AuthController {
     public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest req) {
         registerUseCase.register(req);
         return ResponseEntity.status(HttpStatus.CREATED).body("Usuário criado com sucesso.");
+    }
+
+    @PostMapping("/validate-token")
+    public ResponseEntity<Boolean> validateToken(@RequestBody @Valid ValidateTokenRequest req) {
+        return ResponseEntity.status(HttpStatus.OK).body(validateTokenUseCase.validate(req.token()));
     }
 }
