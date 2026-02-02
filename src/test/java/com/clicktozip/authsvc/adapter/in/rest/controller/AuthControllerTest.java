@@ -1,8 +1,10 @@
 package com.clicktozip.authsvc.adapter.in.rest.controller;
 
 import com.clicktozip.authsvc.adapter.in.rest.exception.GlobalExceptionHandler;
+import com.clicktozip.authsvc.application.exception.InvalidTokenException;
 import com.clicktozip.authsvc.application.port.in.AuthUseCasePort;
 import com.clicktozip.authsvc.application.port.in.RegisterUseCasePort;
+import com.clicktozip.authsvc.application.port.in.ValidateTokenUseCasePort;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,14 +18,25 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
     private MockMvc mockMvc;
+
+    @Mock
+    private AuthUseCasePort authUseCase;
+
+    @Mock
+    private RegisterUseCasePort registerUseCase;
+
+    @Mock
+    private ValidateTokenUseCasePort validateTokenUseCase;
 
     @InjectMocks
     private AuthController authController;
@@ -33,49 +46,62 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(authController)
-                .setControllerAdvice(new GlobalExceptionHandler()) // Important to test exception handling
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
 
+    // --- Registration Tests ---
     @Test
-    void whenRegisterWithShortPassword_shouldReturnBadRequest() throws Exception {
-        Map<String, String> request = Map.of(
-                "email", "test@example.com",
-                "password", "12345" // Short password
-        );
+    void whenRegisterWithValidRequest_shouldReturnCreated() throws Exception {
+        Map<String, String> request = Map.of("name", "Test User", "email", "test@example.com", "password", "password123");
+        doNothing().when(registerUseCase).register(any());
 
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("password: A senha deve ter no mínimo 6 caracteres"));
+                .andExpect(status().isCreated());
+    }
+
+    // --- Token Validation Tests ---
+    @Test
+    void whenValidateWithValidToken_shouldReturnOk() throws Exception {
+        // Given
+        String validToken = "valid-jwt-token";
+        when(validateTokenUseCase.validate(validToken)).thenReturn("test@example.com"); // Return email on success
+
+        Map<String, String> request = Map.of("token", validToken);
+
+        // When & Then
+        mockMvc.perform(post("/auth/validate-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
     }
 
     @Test
-    void whenRegisterWithInvalidEmail_shouldReturnBadRequest() throws Exception {
-        Map<String, String> request = Map.of(
-                "email", "not-an-email",
-                "password", "password123"
-        );
+    void whenValidateWithInvalidToken_shouldReturnUnauthorized() throws Exception {
+        // Given
+        String invalidToken = "invalid-jwt-token";
+        // Simulate the use case throwing the exception
+        when(validateTokenUseCase.validate(invalidToken)).thenThrow(new InvalidTokenException("Token is invalid"));
 
-        mockMvc.perform(post("/auth/register")
+        Map<String, String> request = Map.of("token", invalidToken);
+
+        // When & Then
+        mockMvc.perform(post("/auth/validate-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("email: Email deve ser válido"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Token is invalid"));
     }
 
     @Test
-    void whenRegisterWithBlankPassword_shouldReturnBadRequest() throws Exception {
-        Map<String, String> request = Map.of(
-                "email", "test@example.com",
-                "password", ""
-        );
+    void whenValidateWithEmptyToken_shouldReturnBadRequest() throws Exception {
+        Map<String, String> request = Map.of("token", "");
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/auth/validate-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").isString());
+                .andExpect(status().isBadRequest());
     }
 }

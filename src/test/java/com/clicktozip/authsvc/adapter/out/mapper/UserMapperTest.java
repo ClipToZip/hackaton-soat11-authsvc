@@ -13,7 +13,6 @@ class UserMapperTest {
 
     @Test
     void shouldCorrectlyMapUserEntityToUserDomain() {
-        // Given
         UUID userId = UUID.randomUUID();
         UserEntity entity = new UserEntity(
                 userId,
@@ -23,10 +22,8 @@ class UserMapperTest {
                 OffsetDateTime.now()
         );
 
-        // When
         User domainUser = UserMapper.toDomain(entity);
 
-        // Then
         assertNotNull(domainUser);
         assertEquals(userId.toString(), domainUser.getUserId());
         assertEquals("John Doe", domainUser.getName());
@@ -34,14 +31,38 @@ class UserMapperTest {
     }
 
     @Test
-    void shouldReturnNullWhenUserEntityIsNull() {
-        // Given
-        UserEntity entity = null;
-
-        // When
-        User domainUser = UserMapper.toDomain(entity);
-
-        // Then
+    void shouldReturnNullWhenUserEntityToDomainIsNull() {
+        User domainUser = UserMapper.toDomain(null);
         assertNull(domainUser);
+    }
+
+    @Test
+    void shouldCorrectlyMapUserDomainToUserEntity() {
+        User user = new User(UUID.randomUUID().toString(), "Jane Doe", "jane.doe@example.com", "password123");
+
+        UserEntity entity = UserMapper.toEntity(user);
+
+        assertNotNull(entity);
+        assertEquals(user.getUserId(), entity.getUserId().toString());
+        assertEquals(user.getName(), entity.getName());
+        assertEquals(user.getEmail(), entity.getEmail());
+        assertEquals(user.getPassswordHash(), entity.getPasswordHash());
+    }
+
+    @Test
+    void shouldReturnNullWhenUserDomainToEntityIsNull() {
+        UserEntity entity = UserMapper.toEntity(null);
+        assertNull(entity);
+    }
+
+    @Test
+    void whenToEntityIsCalledWithInvalidUserId_shouldThrowException() {
+        // Given
+        User userWithInvalidId = new User("not-a-valid-uuid", "Test", "test@test.com", "pass");
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            UserMapper.toEntity(userWithInvalidId);
+        });
     }
 }

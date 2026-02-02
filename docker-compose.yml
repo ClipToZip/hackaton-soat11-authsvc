@@ -9,11 +9,13 @@ services:
       - "3000:3000"
     depends_on:
       - db
+      - redis
     environment:
       DB_HOST: ${DB_HOST}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis # Aponta para o serviço redis
     networks:
       - service-clicktozip-network
 
@@ -30,6 +32,28 @@ services:
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "7575:5432"  # Externa:Interna
+    networks:
+      - service-clicktozip-network
+
+  redis:
+    image: redis:alpine
+    container_name: clicktozip-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - service-clicktozip-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: clicktozip-redis-commander
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
     networks:
       - service-clicktozip-network
 
