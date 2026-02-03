@@ -1,6 +1,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE IF NOT EXISTS clicktozip.user (
+CREATE TABLE IF NOT EXISTS cliptozip.user (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name varchar(255),
     email varchar(255) NOT NULL,
@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS clicktozip.user (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_app_user_email ON clicktozip.user(email);
+CREATE INDEX IF NOT EXISTS idx_app_user_email ON cliptozip.user(email);

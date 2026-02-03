@@ -17,36 +17,36 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
       SPRING_DATA_REDIS_HOST: redis # Aponta para o serviço redis
     networks:
-      - service-clicktozip-network
+      - service-cliptozip-network
 
   db:
     image: postgres:16.11-alpine
-    container_name: clicktozip-db
+    container_name: cliptozip-db
     restart: always
     shm_size: 128mb
     environment:
-      POSTGRES_USER: clicktozip
-      POSTGRES_PASSWORD: cl!ckt0z!p
+      POSTGRES_USER: cliptozip
+      POSTGRES_PASSWORD: cl!pt0z!p
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "7575:5432"  # Externa:Interna
     networks:
-      - service-clicktozip-network
+      - service-cliptozip-network
 
   redis:
     image: redis:alpine
-    container_name: clicktozip-redis
+    container_name: cliptozip-redis
     restart: always
     ports:
       - "6379:6379"
     networks:
-      - service-clicktozip-network
+      - service-cliptozip-network
 
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: clicktozip-redis-commander
+    container_name: cliptozip-redis-commander
     restart: always
     environment:
       - REDIS_HOSTS=local:redis:6379
@@ -55,10 +55,10 @@ services:
     depends_on:
       - redis
     networks:
-      - service-clicktozip-network
+      - service-cliptozip-network
 
 networks:
-  service-clicktozip-network:
+  service-cliptozip-network:
     driver: bridge
 
 volumes:
