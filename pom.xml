@@ -8,7 +8,7 @@
 		<version>3.5.9</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.clicktozip</groupId>
+	<groupId>com.cliptozip</groupId>
 	<artifactId>authsvc</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>authsvc</name>

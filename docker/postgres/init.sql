@@ -1,4 +1,1 @@
-CREATE DATABASE clicktozip;
-
-
-
+CREATE DATABASE cliptozip;
