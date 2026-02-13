@@ -28,11 +28,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@RequestBody @Valid LoginRequest req) {
+        log.info("Login request received: {}", req.email());
         return ResponseEntity.status(HttpStatus.OK).body(authUseCase.login(req));
     }
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody @Valid RegisterRequest req) {
+        log.info("Register request received: {}", req.email());
         registerUseCase.register(req);
         return ResponseEntity.status(HttpStatus.CREATED).body("Usuário criado com sucesso.");
     }
@@ -42,6 +44,7 @@ public class AuthController {
         // The use case will now throw an InvalidTokenException if the token is invalid,
         // which will be handled by the GlobalExceptionHandler to return a 401.
         // If it succeeds, it returns the user's email, and we return 200 OK.
+        log.info("Validate token request received: {}", req.token());
         validateTokenUseCase.validate(req.token());
         return ResponseEntity.ok().build();
     }

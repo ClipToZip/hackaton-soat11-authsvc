@@ -109,4 +109,16 @@ class AuthUseCaseTest {
         });
         verify(tokenCachePort, never()).getToken(anyString()); // Ensure cache is not checked on auth failure
     }
+
+    @Test
+    void whenUnexpectedErrorOccurs_shouldThrowRuntimeException() {
+        // Given
+        when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
+        when(tokenCachePort.getToken(user.getEmail())).thenThrow(new RuntimeException("Cache unavailable"));
+
+        // When & Then
+        assertThrows(RuntimeException.class, () -> {
+            authUseCase.login(loginRequest);
+        });
+    }
 }

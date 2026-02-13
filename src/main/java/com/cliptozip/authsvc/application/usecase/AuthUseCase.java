@@ -24,32 +24,39 @@ public class AuthUseCase implements AuthUseCasePort {
 
     @Override
     public TokenResponse login(LoginRequest request) {
+
         // 1. Authenticate user credentials first
         User user = userPersistencePort.findByEmailAndPassword(request.email(), request.password())
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
-        // 2. Check for an existing token in the cache
-        String cachedToken = tokenCachePort.getToken(user.getEmail());
-        if (cachedToken != null) {
-            // 3. If a token exists, validate it
-            if (jwtService.isTokenValid(cachedToken, user.getEmail())) {
-                log.info("Returning valid token from cache for user: {}", user.getEmail());
-                return new TokenResponse(cachedToken, "Bearer", jwtService.getExpirationSeconds());
-            } else {
-                // 4. If token is invalid/expired, remove it from cache
-                log.info("Removing expired token from cache for user: {}", user.getEmail());
-                tokenCachePort.deleteToken(user.getEmail());
+        try {
+            // 2. Check for an existing token in the cache
+            String cachedToken = tokenCachePort.getToken(user.getEmail());
+            if (cachedToken != null) {
+                // 3. If a token exists, validate it
+                if (jwtService.isTokenValid(cachedToken, user.getEmail())) {
+                    log.info("Returning valid token from cache for user: {}", user.getEmail());
+                    return new TokenResponse(cachedToken, "Bearer", jwtService.getExpirationSeconds());
+                } else {
+                    // 4. If token is invalid/expired, remove it from cache
+                    log.info("Removing expired token from cache for user: {}", user.getEmail());
+                    tokenCachePort.deleteToken(user.getEmail());
+                }
             }
+
+            // 5. If no valid token was found in cache, generate a new one
+            log.info("Generating new token for user: {}", user.getEmail());
+            String newToken = jwtService.generateToken(user);
+            long expirationSeconds = jwtService.getExpirationSeconds();
+
+            // 6. Store the new token in the cache
+            tokenCachePort.cacheToken(user.getEmail(), newToken, expirationSeconds, TimeUnit.SECONDS);
+
+            return new TokenResponse(newToken, "Bearer", expirationSeconds);
+        } catch (Exception e) {
+            log.error("Unexpected error occurred during login: {}", e.getMessage(), e);
+            // Throw a generic exception to be caught by the global handler
+            throw new RuntimeException("An unexpected error occurred during login.");
         }
-
-        // 5. If no valid token was found in cache, generate a new one
-        log.info("Generating new token for user: {}", user.getEmail());
-        String newToken = jwtService.generateToken(user);
-        long expirationSeconds = jwtService.getExpirationSeconds();
-
-        // 6. Store the new token in the cache
-        tokenCachePort.cacheToken(user.getEmail(), newToken, expirationSeconds, TimeUnit.SECONDS);
-
-        return new TokenResponse(newToken, "Bearer", expirationSeconds);
     }
 }
