@@ -49,7 +49,7 @@ class JwtServiceTest {
             String token = jwtService.generateToken(testUser);
             Claims claims = Jwts.parserBuilder().setSigningKey(testKey).build().parseClaimsJws(token).getBody();
 
-            assertThat(claims.getSubject()).isEqualTo(testUser.getEmail());
+            assertThat(claims.getSubject()).isEqualTo(testUser.getUserId());
             assertThat(claims.getIssuedAt()).isCloseTo(Date.from(now), 1000);
             assertThat(claims.getExpiration()).isCloseTo(Date.from(now.plusSeconds(testExpirationSeconds)), 1000);
         }
@@ -61,7 +61,7 @@ class JwtServiceTest {
         @Test
         void whenTokenIsValid_shouldReturnTrue() {
             String token = jwtService.generateToken(testUser);
-            boolean isValid = jwtService.isTokenValid(token, testUser.getEmail());
+            boolean isValid = jwtService.isTokenValid(token, testUser.getUserId());
             assertThat(isValid).isTrue();
         }
 
@@ -69,26 +69,26 @@ class JwtServiceTest {
         void whenTokenIsExpired_shouldReturnFalse() {
             // Manually create an expired token
             String expiredToken = Jwts.builder()
-                    .setSubject(testUser.getEmail())
+                    .setSubject(testUser.getUserId())
                     .setIssuedAt(Date.from(Instant.now().minus(2, ChronoUnit.HOURS)))
                     .setExpiration(Date.from(Instant.now().minus(1, ChronoUnit.HOURS)))
                     .signWith(testKey, SignatureAlgorithm.HS256)
                     .compact();
 
-            boolean isValid = jwtService.isTokenValid(expiredToken, testUser.getEmail());
+            boolean isValid = jwtService.isTokenValid(expiredToken, testUser.getUserId());
             assertThat(isValid).isFalse();
         }
 
         @Test
         void whenTokenSubjectDoesNotMatch_shouldReturnFalse() {
             String token = jwtService.generateToken(testUser);
-            boolean isValid = jwtService.isTokenValid(token, "another.user@example.com");
+            boolean isValid = jwtService.isTokenValid(token, "2118a189-479a-40d0-b3b7-01c47700e42f");
             assertThat(isValid).isFalse();
         }
 
         @Test
         void whenTokenIsMalformed_shouldReturnFalse() {
-            boolean isValid = jwtService.isTokenValid("not-a-valid-jwt", testUser.getEmail());
+            boolean isValid = jwtService.isTokenValid("not-a-valid-jwt", testUser.getUserId());
             assertThat(isValid).isFalse();
         }
 
@@ -96,11 +96,11 @@ class JwtServiceTest {
         void whenTokenHasInvalidSignature_shouldReturnFalse() {
             Key anotherKey = Keys.hmacShaKeyFor("anotherSecretKeyThatIsAlsoVeryLongAndSecure123".getBytes(StandardCharsets.UTF_8));
             String tokenWithWrongSignature = Jwts.builder()
-                    .setSubject(testUser.getEmail())
+                    .setSubject(testUser.getUserId())
                     .signWith(anotherKey, SignatureAlgorithm.HS256)
                     .compact();
 
-            boolean isValid = jwtService.isTokenValid(tokenWithWrongSignature, testUser.getEmail());
+            boolean isValid = jwtService.isTokenValid(tokenWithWrongSignature, testUser.getUserId());
             assertThat(isValid).isFalse();
         }
     }
