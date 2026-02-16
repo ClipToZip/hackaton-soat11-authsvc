@@ -49,7 +49,7 @@ class AuthUseCaseTest {
     void whenNoTokenInCache_shouldGenerateNewTokenAndCacheIt() {
         // Given
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
-        when(tokenCachePort.getToken(user.getEmail())).thenReturn(null); // No token in cache
+        when(tokenCachePort.getToken(user.getUserId())).thenReturn(null); // No token in cache
         when(jwtService.generateToken(user)).thenReturn("new-fake-jwt-token");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
@@ -58,7 +58,7 @@ class AuthUseCaseTest {
 
         // Then
         assertThat(tokenResponse.token()).isEqualTo("new-fake-jwt-token");
-        verify(tokenCachePort).cacheToken(user.getEmail(), "new-fake-jwt-token", 3600L, TimeUnit.SECONDS);
+        verify(tokenCachePort).cacheToken(user.getUserId(), "new-fake-jwt-token", 3600L, TimeUnit.SECONDS);
     }
 
     @Test
@@ -66,8 +66,8 @@ class AuthUseCaseTest {
         // Given
         String cachedToken = "valid-cached-token";
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
-        when(tokenCachePort.getToken(user.getEmail())).thenReturn(cachedToken);
-        when(jwtService.isTokenValid(cachedToken, user.getEmail())).thenReturn(true);
+        when(tokenCachePort.getToken(user.getUserId())).thenReturn(cachedToken);
+        when(jwtService.isTokenValid(cachedToken, user.getUserId())).thenReturn(true);
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
         // When
@@ -84,8 +84,8 @@ class AuthUseCaseTest {
         // Given
         String expiredToken = "expired-cached-token";
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
-        when(tokenCachePort.getToken(user.getEmail())).thenReturn(expiredToken);
-        when(jwtService.isTokenValid(expiredToken, user.getEmail())).thenReturn(false); // Token is invalid
+        when(tokenCachePort.getToken(user.getUserId())).thenReturn(expiredToken);
+        when(jwtService.isTokenValid(expiredToken, user.getUserId())).thenReturn(false); // Token is invalid
         when(jwtService.generateToken(user)).thenReturn("new-fresh-token");
         when(jwtService.getExpirationSeconds()).thenReturn(3600L);
 
@@ -94,8 +94,8 @@ class AuthUseCaseTest {
 
         // Then
         assertThat(tokenResponse.token()).isEqualTo("new-fresh-token");
-        verify(tokenCachePort).deleteToken(user.getEmail()); // Verify old token is deleted
-        verify(tokenCachePort).cacheToken(user.getEmail(), "new-fresh-token", 3600L, TimeUnit.SECONDS); // Verify new token is cached
+        verify(tokenCachePort).deleteToken(user.getUserId()); // Verify old token is deleted
+        verify(tokenCachePort).cacheToken(user.getUserId(), "new-fresh-token", 3600L, TimeUnit.SECONDS); // Verify new token is cached
     }
 
     @Test
@@ -114,7 +114,7 @@ class AuthUseCaseTest {
     void whenUnexpectedErrorOccurs_shouldThrowRuntimeException() {
         // Given
         when(userPersistencePort.findByEmailAndPassword(loginRequest.email(), loginRequest.password())).thenReturn(Optional.of(user));
-        when(tokenCachePort.getToken(user.getEmail())).thenThrow(new RuntimeException("Cache unavailable"));
+        when(tokenCachePort.getToken(user.getUserId())).thenThrow(new RuntimeException("Cache unavailable"));
 
         // When & Then
         assertThrows(RuntimeException.class, () -> {

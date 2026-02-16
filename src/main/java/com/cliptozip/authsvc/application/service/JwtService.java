@@ -32,17 +32,18 @@ public class JwtService {
         Instant exp = now.plusSeconds(expirationSeconds);
 
         return Jwts.builder()
-            .setSubject(user.getEmail())
+            .setSubject(user.getUserId()) // Use userId as the subject
+            .claim("email", user.getEmail()) // Add user's email as a custom claim
             .setIssuedAt(Date.from(now))
             .setExpiration(Date.from(exp))
             .signWith(key, SignatureAlgorithm.HS256)
             .compact();
     }
 
-    public boolean isTokenValid(String token, String userEmail) {
+    public boolean isTokenValid(String token, String userId) {
         try {
             final String subject = extractClaim(token, Claims::getSubject);
-            return (subject.equals(userEmail) && !isTokenExpired(token));
+            return (subject.equals(userId) && !isTokenExpired(token));
         } catch (Exception e) {
             return false;
         }

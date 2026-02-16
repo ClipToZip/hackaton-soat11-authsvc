@@ -24,9 +24,9 @@ public class ValidateTokenUseCase implements ValidateTokenUseCasePort {
         }
 
         try {
-            final String userEmail = jwtService.extractClaim(token, Claims::getSubject);
+            final String userId = jwtService.extractClaim(token, Claims::getSubject);
 
-            String cachedToken = tokenCachePort.getToken(userEmail);
+            String cachedToken = tokenCachePort.getToken(userId);
             if (cachedToken == null) {
                 throw new InvalidTokenException("Token not found in cache. Please log in again.");
             }
@@ -35,12 +35,12 @@ public class ValidateTokenUseCase implements ValidateTokenUseCasePort {
                 throw new InvalidTokenException("Stale token. A newer token has been issued.");
             }
 
-            if (!jwtService.isTokenValid(token, userEmail)) {
+            if (!jwtService.isTokenValid(token, userId)) {
                 throw new InvalidTokenException("Token is expired or has an invalid signature.");
             }
 
-            log.info("Token successfully validated for user: {}", userEmail);
-            return userEmail;
+            log.info("Token successfully validated for user: {}", userId);
+            return userId;
 
         } catch (Exception e) {
             log.error("An exception occurred during token validation: {}", e.getMessage());
