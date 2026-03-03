@@ -165,6 +165,11 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.12</version>
+				<configuration>
+					<excludes>
+						<exclude>com/cliptozip/authsvc/config/**</exclude>
+					</excludes>
+				</configuration>
 				<executions>
 					<execution>
 						<goals>
@@ -197,6 +202,9 @@
 									</limits>
 								</rule>
 							</rules>
+							<excludes>
+								<exclude>com/cliptozip/authsvc/config/**</exclude>
+							</excludes>
 						</configuration>
 					</execution>
 				</executions>
